@@ -1,50 +1,54 @@
-# poly2lms.pl <filename> 
+# poly2lms.pl <input-filename> 
 # Written by John Storms 
 # listentoourlights@gmail.com
 # http://listentoourlights.com
 # 
 # This is known crappy code. Very limited testing done.
 #
-# This script takes a file with a single (*1*) label/timing track and genertes
-# XML snippets for the timing grid. Optionally, it can also generate channel
-# and track XML snippets to map midi notes to LOR channels based on the
-# polyphonic translation from the Queen Mary Vamp plugin. 
-# The expect use case is that the user will use Audacity to export label tracks,
-# then use this script to convert them to LOR snippets, capture this script's output 
-# to a file, then using a file editor (like Notepad.exe) copy and paste the XML 
-# snippets into the appropriate locations in their LOR generated .LMS files.
-# I would recommend creating a very basic LOR .LMS file to past into. Specifically, 
-# I would Start a new musical sequence, add 1 channel, and do no timings, then save. 
-# Then paste in the XML snippets.
+# This script takes a file with a single (*1*) Audacity label/timing track and outputs
+# a Light-O-Rama LMS file to STDOUT where each midi note is represented as a Light-O-Rama channel.
+# This script does not put in the name of the audio (mp3) file. Once created open the newly created
+# LOR .lms file with the Light-O-Rama Sequence editor and add the media file. Select "Edit" from
+# the sequence editor menu bar then select "Media" and select the audio file.
 #
-# <filename> - contains the file with the one (*1*) audacity track with Polyphonic transcription
-# timing/label info. Will map the label information to midi notes and give each note a
-# LOR channel.
+# This script runs from a command prompt. To get a command prompt in MS-Windows press the Windows key 
+# on your keyboard, then type "cmd" and press enter.
+#
+# <input-filename> - contains the file with the one (*1*) audacity track with Polyphonic transcription
+# timing/label info. The script will map the midi numerical value to actual midi notes.
+#
+# Example usage fomr MS-Windows cmd prompt:
+# poly2lms.pl AUD-PolyphonicTranscription-for-yourFavSong.txt > yourFavSong.lms
 #
 # Software You'll Need: (Assuming MS-Windows ENV)
-# * LOR S3
+# * PERL script interpreter
+#   http://www.activestate.com/activeperl (many other options too)
+#   You can verify this is intalled properly by opening a command prompt ("cmd) and typing...
+#
+#    perl -v
+#
+#   If you've installed it right you should see the perl version number that has been installed
+#
+# * LOR S3 (I'm currently using S4 pro)
 #   http://www1.lightorama.com/sequencing-software-download/
-# * Audacity
+# * Audacity (I've been using v2.3.3)
 #   http://audacity.sourceforge.net/
-# * Queen Mary Vamp plugins for Audacity
+# * Queen Mary Vamp plugins for Audacity - although I think Polyphonic Transcription
+#   may be included by default.
 #   http://nutcracker123.com/nutcracker/releases/Vamp_Plugin.exe
-
-# * PERL (many others too)
-#   http://www.activestate.com/activeperl
 #
 # Potential improvements:
 # * Use an XML library. Apologies in advance, there are better ways to manipulate XML
 # * Modify to do multiple timing grids from one input file.
 # * Modify to modularize label mapping so other mappings other than midi can be done
-# * Instead of just doing snippets take a LMS file as input and then modify it.
-# * Use pointers to the arrays.
+# * Use pointers to the arrays for better memory usage.
 # * Better command line argument handling
 # * Check for non-existent file
-# * Use something other than PERL
 # * Replace color constant with some color options
 # * Figure out better way to get total number of centiseconds in a song
 
 my($filename) = $ARGV[0];     # Audacity label/timing file
+
 my($savedindex) = 0;
 my($splitbylabel) = 1;
 
@@ -145,6 +149,11 @@ sub create_LOR_XML_snips {
 
 
 # @channelsNtracks = do_channels_and_tracks($totcenti,$savedindex,@chdata);
+# This function creates the LOR XML blocks for Channels and Tracks
+# It returns
+# $chlen = Number of array entries used for channels
+# @channels = Array containing channel XML
+# @tracks = Array containing tracks XML
 sub do_channels_and_tracks {
 	my($totcenti) = shift(@_);
 	my($savedindex) = shift(@_);
@@ -353,10 +362,13 @@ sub round {
     } #endif
 } # round
 
+# This function creates the XML header (first line) for a LOR file
+# Optionally you can pass in a hash table with the following keys, but you never will
 # version
 # encoding
 # standalone
 # my($xml_lor_header) = create_LOR_header();
+# Returns a string with the first line of XML
 sub create_LOR_header {
 	my(%in) = @_;
 	my($xml);
@@ -375,7 +387,9 @@ sub create_LOR_header {
 	return($xml);
 } # create_LOR_header
 
+# This function creates the LOR XML header to the sequence section.
 # my($xml_lor_seqheader) = create_LOR_seqheader();
+# Returns an XML string
 sub create_LOR_seqheader {
 	my(%in) = @_;
 	my($xml);
@@ -383,7 +397,7 @@ sub create_LOR_seqheader {
 
 	if( $in{'videoUsage'} eq "")  { $in{'videoUsage'} = "2"; }
 	if( $in{'saveFileVersion'} eq "")  { $in{'saveFileVersion'} = "14"; }
-	if( $in{'author'} eq "")  { $in{'author'} = "John Storms"; }
+	if( $in{'author'} eq "")  { $in{'author'} = "Poly2LMS by John Storms"; }
 
 	$xml = "<sequence";
 	foreach(@keys) {
@@ -395,7 +409,9 @@ sub create_LOR_seqheader {
 
 } # create_LOR_seqheader
 
-# my($xml_lor_animation) = create_LOR_animation();
+# This function creates the XML LOR snippet for a blank animation block
+# my($xml_lor_animation) =create_LOR_animation();
+# Returns a string containing the XML
 sub create_LOR_animation {
 	my(%in) = @_;
 	my($xml);
@@ -411,5 +427,4 @@ sub create_LOR_animation {
 	$xml .= "\/\>";
 
 	return($xml);
-
 } # create_LOR_animation
