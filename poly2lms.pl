@@ -1,4 +1,4 @@
-# poly2lms.pl <input-filename> 
+# poly2lms.pl <input-labelfile> <output-lmsfile>
 # Written by John Storms 
 # listentoourlights@gmail.com
 # http://listentoourlights.com
@@ -17,8 +17,12 @@
 # <input-filename> - contains the file with the one (*1*) audacity track with Polyphonic transcription
 # timing/label info. The script will map the midi numerical value to actual midi notes.
 #
+# [<output_lms_file>] - output file containing the XML sequence for Light-O-Rama sequence editor.
+#                     Be sure to give it a .lms extension.
+#                     If no output file is specified then the file is dumped to STDOUT.
+#
 # Example usage fomr MS-Windows cmd prompt:
-# poly2lms.pl AUD-PolyphonicTranscription-for-yourFavSong.txt > yourFavSong.lms
+# poly2lms.pl AUD-PolyphonicTranscription-for-yourFavSong.txt yourFavSong.lms
 #
 # Software You'll Need: (Assuming MS-Windows ENV)
 # * PERL script interpreter
@@ -43,23 +47,36 @@
 # * Modify to modularize label mapping so other mappings other than midi can be done
 # * Use pointers to the arrays for better memory usage.
 # * Better command line argument handling
-# * Check for non-existent file
 # * Replace color constant with some color options
 # * Figure out better way to get total number of centiseconds in a song
 
 my($filename) = $ARGV[0];     # Audacity label/timing file
+my($outfile) = $ARGV[1];      # LMS outputfile
+my($usage) = "poly2lms.pl \<polyphonic_label_file.txt\> \[<lms_outfile_filename.lms\>]\n\<polyphonic_label_file.txt\> -- Polyphonic transcription label file exported from Audacity\n\[<lms_outfile_filename.lms\>] - Optional Light-O-Rama XML file to be loaded into sequence editor. Give .LMS extension\nIf no output file is specified then the LMS file is dumped to STDOUT.\nGenerated LMS file will not have an audio file specified, this needs to be set from the sequence editor.";
 
 my($savedindex) = 0;
 my($splitbylabel) = 1;
 
-# Some crude error checking
-if($filename eq "") {die;} # Should check that file exists
+# Did user specify a filename?
+if($filename eq "") {	die("ERROR: No label filename provided.\n$usage\n"); } 
 
-# Convert timings/labels into LOR XML snippets
-my(@output) = create_LOR_XML_snips($filename,$savedindex,$splitbylabel);
+if(-e $filename){
+	# Convert timings/labels into LOR XML snippets
+	my(@output) = create_LOR_XML_snips($filename,$savedindex,$splitbylabel);
 
-# print output that can be copy/pasted into LOR .lms files
-foreach my $i (@output) { print $i; }
+	if( $outfile eq "") {
+		# print output that can be copy/pasted into LOR .lms files
+		foreach my $i (@output) { print $i; }
+	} else {
+		open(WRITE,">".$outfile);
+		print WRITE @output;
+		close(WRITE);
+		print "Polyphonic Transcription labels [$filename] transformed into Light-O-Rama LMS file [$outfile]. Be sure to specify the audio file after opening.\n";
+	} #endif
+}else{
+	die("ERROR: File $filename does not exist.\n$usage\n");
+} #endif filecheck
+ 
 
 # INPUTS
 # filename = tab deliminated text file containing "1" audacity label/timing information
@@ -209,137 +226,143 @@ sub do_channels_and_tracks {
 
 # maps an integer to a midi note name
 # pulled a table off the Internet and massaged it into a hash table.
+# https://studiocode.dev/resources/midi-middle-c/
 sub getmidi {
 	my($note) = shift(@_);
 	my(%midi);
-	$midi{'0'}="C";
-	$midi{'1'}="C#-Db";
-	$midi{'2'}="D";
-	$midi{'3'}="D#-Eb";
-	$midi{'4'}="E";
-	$midi{'5'}="F";
-	$midi{'6'}="F#-Gb";
-	$midi{'7'}="G";
-	$midi{'8'}="G#-Ab";
-	$midi{'9'}="A";
-	$midi{'10'}="A#-Bb";
-	$midi{'11'}="B";
-	$midi{'12'}="C";
-	$midi{'13'}="C#-Db";
-	$midi{'14'}="D";
-	$midi{'15'}="D#-Eb";
-	$midi{'16'}="E";
-	$midi{'17'}="F";
-	$midi{'18'}="F#-Gb";
-	$midi{'19'}="G";
-	$midi{'20'}="G#-Ab";
-	$midi{'21'}="A";
-	$midi{'22'}="A#-Bb";
-	$midi{'23'}="B";
-	$midi{'24'}="C";
-	$midi{'25'}="C#-Db";
-	$midi{'26'}="D";
-	$midi{'27'}="D#-Eb";
-	$midi{'28'}="E";
-	$midi{'29'}="F";
-	$midi{'30'}="F#-Gb";
-	$midi{'31'}="Low_G";
-	$midi{'32'}="Low_G#-Ab";
-	$midi{'33'}="Low_A";
-	$midi{'34'}="Low_A#-Bb";
-	$midi{'35'}="Low_B";
-	$midi{'36'}="Low_C";
-	$midi{'37'}="Low_C#-Db";
-	$midi{'38'}="Low_D";
-	$midi{'39'}="Low_D#-Eb";
-	$midi{'40'}="Low_E";
-	$midi{'41'}="Low_F";
-	$midi{'42'}="Low_F#-Gb";
-	$midi{'43'}="Bass_G";
-	$midi{'44'}="Bass_G#-Ab";
-	$midi{'45'}="Bass_A";
-	$midi{'46'}="Bass_A#-Bb";
-	$midi{'47'}="Bass_B";
-	$midi{'48'}="Bass_C";
-	$midi{'49'}="Bass_C#-Db";
-	$midi{'50'}="Bass_D";
-	$midi{'51'}="Bass_D#-Eb";
-	$midi{'52'}="Bass_E";
-	$midi{'53'}="Bass_F";
-	$midi{'54'}="Bass_F#-Gb";
-	$midi{'55'}="Middle_G";
-	$midi{'56'}="Middle_G#-Ab";
-	$midi{'57'}="Middle_A";
-	$midi{'58'}="Middle_A#-Bb";
-	$midi{'59'}="Middle_B";
-	$midi{'60'}="Middle_C";
-	$midi{'61'}="Middle_C#-Db";
-	$midi{'62'}="Middle_D";
-	$midi{'63'}="Middle_D#-Eb";
-	$midi{'64'}="Middle_E";
-	$midi{'65'}="Middle_F";
-	$midi{'66'}="Treble_F#-Gb";
-	$midi{'67'}="Treble_G";
-	$midi{'68'}="Treble_G#-Ab";
-	$midi{'69'}="Treble_A";
-	$midi{'70'}="Treble_A#-Bb";
-	$midi{'71'}="Treble_B";
-	$midi{'72'}="Treble_C";
-	$midi{'73'}="Treble_C#-Db";
-	$midi{'74'}="Treble_D";
-	$midi{'75'}="Treble_D#-Eb";
-	$midi{'76'}="Treble_E";
-	$midi{'77'}="Treble_F";
-	$midi{'78'}="High_F#-Gb";
-	$midi{'79'}="High_G";
-	$midi{'80'}="High_G#-Ab";
-	$midi{'81'}="High_A";
-	$midi{'82'}="High_A#-Bb";
-	$midi{'83'}="High_B";
-	$midi{'84'}="High_C";
-	$midi{'85'}="High_C#-Db";
-	$midi{'86'}="High_D";
-	$midi{'87'}="High_D#-Eb";
-	$midi{'88'}="High_E";
-	$midi{'89'}="High_F";
-	$midi{'90'}="F#-Gb";
-	$midi{'91'}="G";
-	$midi{'92'}="G#-Ab";
-	$midi{'93'}="A";
-	$midi{'94'}="A#-Bb";
-	$midi{'95'}="B";
-	$midi{'96'}="C";
-	$midi{'97'}="C#-Db";
-	$midi{'98'}="D";
-	$midi{'99'}="D#-Eb";
-	$midi{'100'}="E";
-	$midi{'101'}="F";
-	$midi{'102'}="F#-Gb";
-	$midi{'103'}="G";
-	$midi{'104'}="G#-Ab";
-	$midi{'105'}="A";
-	$midi{'106'}="A#-Bb";
-	$midi{'107'}="B";
-	$midi{'108'}="C";
-	$midi{'109'}="C#-Db";
-	$midi{'110'}="D";
-	$midi{'111'}="D#-Eb";
-	$midi{'112'}="E";
-	$midi{'113'}="F";
-	$midi{'114'}="F#-Gb";
-	$midi{'115'}="G";
-	$midi{'116'}="G#-Ab";
-	$midi{'117'}="A";
-	$midi{'118'}="A#-Bb";
-	$midi{'119'}="B";
-	$midi{'120'}="C";
-	$midi{'121'}="C#-Db";
-	$midi{'122'}="D";
-	$midi{'123'}="D#-Eb";
-	$midi{'124'}="E";
-	$midi{'125'}="F";
-	$midi{'126'}="F#-Gb";
-	$midi{'127'}="G";
+	$midi{'0'}="C-1";
+	$midi{'1'}="C#-1";
+	$midi{'2'}="D-1";
+	$midi{'3'}="D#-1";
+	$midi{'4'}="E-1";
+	$midi{'5'}="F-1";
+	$midi{'6'}="F#-1";
+	$midi{'7'}="G-1";
+	$midi{'8'}="G#-1";
+	$midi{'9'}="A-1";
+	$midi{'10'}="A#-1";
+	$midi{'11'}="B-1";
+	$midi{'12'}="C0";
+	$midi{'13'}="C0#";
+	$midi{'14'}="D0";
+	$midi{'15'}="D#0-Eb0";
+	$midi{'16'}="E0";
+	$midi{'17'}="F0";
+	$midi{'18'}="F#0-Gb0";
+	$midi{'19'}="G0";
+	$midi{'20'}="G#0-Ab0";
+	# https://www.inspiredacoustics.com/en/MIDI_note_numbers_and_center_frequencies
+	$midi{'21'}="A0";
+	$midi{'22'}="A#0-Bb0";
+	$midi{'23'}="B0";
+	$midi{'24'}="C1";
+	$midi{'25'}="C#1-Db1";
+	$midi{'26'}="D1";
+	$midi{'27'}="D#1-Eb1";
+	$midi{'28'}="E1";
+	$midi{'29'}="F1";
+	$midi{'30'}="F1#-Gb1";
+	$midi{'31'}="Low_G1";
+	$midi{'32'}="Low_G#1-Ab1";
+	$midi{'33'}="Low_A1";
+	$midi{'34'}="Low_A#1-Bb1";
+	$midi{'35'}="Low_B1";
+	$midi{'36'}="Low_C2";
+	$midi{'37'}="Low_C#2-Db2";
+	$midi{'38'}="Low_D2";
+	$midi{'39'}="Low_D#2-Eb2";
+	$midi{'40'}="Low_E2";
+	$midi{'41'}="Low_F2";
+	$midi{'42'}="Low_F#2-Gb2";
+	$midi{'43'}="Bass_G2";
+	$midi{'44'}="Bass_G#2-Ab2";
+	$midi{'45'}="Bass_A2";
+	$midi{'46'}="Bass_A#2-Bb2";
+	$midi{'47'}="Bass_B2";
+	$midi{'48'}="Bass_C3";
+	$midi{'49'}="Bass_C#3-Db3";
+	$midi{'50'}="Bass_D3";
+	$midi{'51'}="Bass_D#3-Eb3";
+	$midi{'52'}="Bass_E3";
+	$midi{'53'}="Bass_F3";
+	$midi{'54'}="Bass_F#3-Gb3";
+	$midi{'55'}="Middle_G3";
+	$midi{'56'}="Middle_G#3-Ab3";
+	$midi{'57'}="Middle_A3";
+	$midi{'58'}="Middle_A#3-Bb3";
+	$midi{'59'}="Middle_B3";
+	$midi{'60'}="Middle_C4-middle-C";
+	$midi{'61'}="Middle_C#4-Db4";
+	$midi{'62'}="Middle_D4";
+	$midi{'63'}="Middle_D#4-Eb4";
+	$midi{'64'}="Middle_E4";
+	$midi{'65'}="Middle_F4";
+	$midi{'66'}="Treble_F#4-Gb4";
+	$midi{'67'}="Treble_G4";
+	$midi{'68'}="Treble_G#4-Ab4";
+	$midi{'69'}="Treble_A4";
+	$midi{'70'}="Treble_A#4-Bb4";
+	$midi{'71'}="Treble_B4";
+	$midi{'72'}="Treble_C5";
+	$midi{'73'}="Treble_C#5-Db5";
+	$midi{'74'}="Treble_D5";
+	$midi{'75'}="Treble_D#5-Eb5";
+	$midi{'76'}="Treble_E5";
+	$midi{'77'}="Treble_F5";
+	$midi{'78'}="High_F#5-Gb5";
+	$midi{'79'}="High_G5";
+	$midi{'80'}="High_G#5-Ab5";
+	$midi{'81'}="High_A5";
+	$midi{'82'}="High_A#5-Bb5";
+	$midi{'83'}="High_B5";
+	$midi{'84'}="High_C6";
+	$midi{'85'}="High_C#6-Db6";
+	$midi{'86'}="High_D6";
+	$midi{'87'}="High_D#6-Eb6";
+	$midi{'88'}="High_E6";
+	$midi{'89'}="High_F6";
+	$midi{'90'}="F#6-Gb6";
+	$midi{'91'}="G6";
+	$midi{'92'}="G#6-Ab6";
+	$midi{'93'}="A6";
+	$midi{'94'}="A#6-Bb6";
+	$midi{'95'}="B6";
+	$midi{'96'}="C7";
+	$midi{'97'}="C#7-Db7";
+	$midi{'98'}="D7";
+	$midi{'99'}="D#7-Eb7";
+	$midi{'100'}="E7";
+	$midi{'101'}="F7";
+	$midi{'102'}="F#7-Gb7";
+	$midi{'103'}="G7";
+	$midi{'104'}="G#7-Ab7";
+	$midi{'105'}="A7";
+	$midi{'106'}="A#7-Bb7";
+	$midi{'107'}="B7";
+	$midi{'108'}="C8";
+	$midi{'109'}="C#8-Db8";
+	$midi{'110'}="D8";
+	$midi{'111'}="D#8-Eb8";
+	$midi{'112'}="E8";
+	$midi{'113'}="F8";
+	$midi{'114'}="F#8-Gb8";
+	$midi{'115'}="G8";
+	$midi{'116'}="G#8-Ab8";
+	$midi{'117'}="A8";
+	$midi{'118'}="A#8-Bb8";
+	$midi{'119'}="B8";
+	$midi{'120'}="C9";
+	$midi{'121'}="C#9-Db9";
+	$midi{'122'}="D9";
+	$midi{'123'}="D#9-Eb9";
+	$midi{'124'}="E9";
+	$midi{'125'}="F9";
+	$midi{'126'}="F#9-Gb9";
+	$midi{'127'}="G9";
+	$midi{'128'}="G#9-Ab9";
+	$midi{'129'}="A9";
+	$midi{'130'}="A#9-Bb9";
+	$midi{'131'}="B9";
 	return($midi{$note});
 } #getmidi
 
